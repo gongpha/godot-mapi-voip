@@ -1,0 +1,6 @@
+[configuration]
+entry_symbol = "mapivoip_init"
+compatibility_minimum = 4.2
+
+[libraries]
+windows.x86_64 = "bin/libmapi-voip.windows.release.x86_64.dll"

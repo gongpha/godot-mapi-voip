@@ -1,0 +1,44 @@
+[gd_scene load_steps=2 format=3 uid="uid://bkp1pxcrhyq3a"]
+
+[ext_resource type="Script" path="res://main.gd" id="1_phvk8"]
+
+[node name="Main" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_phvk8")
+
+[node name="client" type="Button" parent="."]
+layout_mode = 0
+offset_left = 239.0
+offset_top = 129.0
+offset_right = 390.0
+offset_bottom = 163.0
+text = "client"
+
+[node name="server" type="Button" parent="."]
+layout_mode = 0
+offset_left = 78.0
+offset_top = 79.0
+offset_right = 229.0
+offset_bottom = 113.0
+text = "server"
+
+[node name="3d" type="Node3D" parent="."]
+
+[node name="Camera3D" type="Camera3D" parent="3d"]
+current = true
+
+[node name="label" type="Label" parent="3d"]
+offset_left = 83.0
+offset_top = 14.0
+offset_right = 343.0
+offset_bottom = 62.0
+text = "@@@@@@"
+horizontal_alignment = 1
+
+[connection signal="pressed" from="client" to="." method="_on_client_pressed"]
+[connection signal="pressed" from="server" to="." method="_on_server_pressed"]
