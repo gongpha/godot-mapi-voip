@@ -30,9 +30,6 @@ public:
 	VoiceInstance3D();
 	~VoiceInstance3D();
 
-	virtual void _enter_tree();
-	virtual void _exit_tree();
-
 	void _upload(const PackedByteArray& data);
 	void _receive(const PackedByteArray& data);
 

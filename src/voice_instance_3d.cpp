@@ -38,13 +38,34 @@ void VoiceInstance3D::_bind_methods()
 
 void VoiceInstance3D::_notification(int p_what)
 {
-	if (p_what == NOTIFICATION_READY) {
-		Dictionary opts;
-		opts["rpc_mode"] = MultiplayerAPI::RPC_MODE_ANY_PEER;
-		opts["transfer_mode"] = MultiplayerPeer::TRANSFER_MODE_UNRELIABLE;
-		opts["call_local"] = false;
-		opts["channel"] = RPC_CHANNEL;
-		rpc_config(sn_receive, opts);
+	switch (p_what)
+	{
+		case NOTIFICATION_READY: {
+			Dictionary opts;
+			opts["rpc_mode"] = MultiplayerAPI::RPC_MODE_ANY_PEER;
+			opts["transfer_mode"] = MultiplayerPeer::TRANSFER_MODE_UNRELIABLE;
+			opts["call_local"] = false;
+			opts["channel"] = RPC_CHANNEL;
+			rpc_config(sn_receive, opts);
+		} break;
+
+		case NOTIFICATION_ENTER_TREE: {
+			if (Engine::get_singleton()->is_editor_hint())
+				// Don't initialize voice in editor
+				return;
+			if (voice_peer)
+				memdelete(voice_peer);
+			voice_peer = memnew(VoicePeer);
+			voice_peer->setup(this);
+			_recheck_use_microphone();
+		} break;
+
+		case NOTIFICATION_EXIT_TREE: {
+			if (voice_peer)
+				memdelete(voice_peer);
+			voice_peer = nullptr;
+		} break;
+
 	}
 
 	if (voice_peer)
@@ -126,30 +147,6 @@ void VoiceInstance3D::_receive(const PackedByteArray& data)
 	ERR_FAIL_COND(!voice_peer);
 	voice_peer->poll_receive(data);
 	emit_signal(sn_received_frame_data, data);
-}
-
-void VoiceInstance3D::_enter_tree()
-{
-	AudioStreamPlayer3D::_enter_tree();
-
-	if (Engine::get_singleton()->is_editor_hint())
-		// Don't initialize voice in editor
-		return;
-	if (voice_peer)
-		memdelete(voice_peer);
-	voice_peer = memnew(VoicePeer);
-	voice_peer->setup(this);
-	_recheck_use_microphone();
-}
-
-void VoiceInstance3D::_exit_tree()
-{
-	AudioStreamPlayer3D::_exit_tree();
-
-	if (voice_peer) {
-		memdelete(voice_peer);
-		voice_peer = nullptr;
-	}
 }
 
 StringName VoiceInstance3D::get_mic_busname() const {
