@@ -117,6 +117,7 @@ void VoicePeer::_update_use_microphone()
 			opus_encoder_ctl(encoder, OPUS_SET_BITRATE(24000));
 			opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
 			opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+			opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
 		}
 	}
 	else {
