@@ -146,35 +146,6 @@ void VoicePeer::set_use_microphone(bool yes) {
 	_update_use_microphone();
 }
 
-void VoicePeer::_poll_receive() {
-	if (decoder_buffer.is_empty())
-		return;
-	PackedByteArray pba = decoder_buffer.front()->get();
-	decoder_buffer.pop_front();
-
-	PackedVector2Array pv2;
-
-	float* f = (float*)memalloc(sizeof(float) * frame_count * 6);
-	int r = opus_decode_float(decoder, pba.ptr(), pba.size(), f, frame_count, 0);
-	if (r < 0) {
-		UtilityFunctions::push_error("Failed to decode Opus packet: " + String::num_int64(r));
-		memfree(f);
-		return;
-	}
-
-	pv2.resize(r);
-
-	// apply to both channels
-	for (int64_t i = 0; i < r; i++) {
-		pv2[i].x = f[i];
-		pv2[i].y = f[i];
-	}
-
-	memfree(f);
-	//UtilityFunctions::prints("rec : ", pv2.size());
-	playback_generator->push_buffer(pv2);
-}
-
 void VoicePeer::_poll_microphone() {
 	if (mic_capture.is_null())
 		return;
@@ -215,12 +186,30 @@ void VoicePeer::poll_notifications(int p_what)
 	if (p_what != Node::NOTIFICATION_PROCESS)
 		return;
 
-	_poll_receive();
 	_poll_microphone();
 }
 
 void VoicePeer::poll_receive(const PackedByteArray& data) {
-	decoder_buffer.push_back(data);
+	float* f = (float*)memalloc(sizeof(float) * frame_count * 6);
+	int r = opus_decode_float(decoder, data.ptr(), data.size(), f, frame_count, 0);
+	if (r < 0) {
+		UtilityFunctions::push_error("Failed to decode Opus packet: " + String::num_int64(r));
+		memfree(f);
+		return;
+	}
+
+	PackedVector2Array pv2;
+	pv2.resize(r);
+
+	// apply to both channels
+	for (int64_t i = 0; i < r; i++) {
+		pv2[i].x = f[i];
+		pv2[i].y = f[i];
+	}
+
+	memfree(f);
+	//UtilityFunctions::prints("rec : ", pv2.size());
+	playback_generator->push_buffer(pv2);
 }
 
 void VoicePeer::set_frame_count(int32_t frame_count)
@@ -238,4 +227,9 @@ StringName VoicePeer::get_mic_busname() const {
 }
 AudioStreamPlayer* VoicePeer::get_mic_player() const {
 	return mic;
+}
+
+void VoicePeer::clear_buffer() {
+	if (mic_capture.is_valid())
+		mic_capture->clear_buffer();
 }

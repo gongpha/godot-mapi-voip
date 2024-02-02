@@ -16,8 +16,8 @@ private:
 	Node* base;
 	Ref<AudioStreamGeneratorPlayback> playback_generator;
 	OpusDecoder* decoder;
-	List<PackedByteArray> decoder_buffer;
-	void _poll_receive();
+	//List<PackedByteArray> decoder_buffer;
+	//void _poll_receive();
 
 	AudioStreamPlayer* mic;
 	Ref<AudioEffectCapture> mic_capture;
@@ -49,4 +49,6 @@ public:
 
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
+
+	void clear_buffer();
 };
