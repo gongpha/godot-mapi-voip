@@ -40,10 +40,15 @@ void VoiceInstance3D::_bind_methods()
 
 	ClassDB::bind_method(D_METHOD("clear_buffer"), &VoiceInstance3D::clear_buffer);
 
+	ClassDB::bind_method(D_METHOD("set_opus_bitrate", "bitrate"), &VoiceInstance3D::set_opus_bitrate);
+	ClassDB::bind_method(D_METHOD("get_opus_bitrate"), &VoiceInstance3D::get_opus_bitrate);
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_microphone"), "set_use_microphone", "is_using_microphone");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loopback"), "set_loopback", "is_loopback");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rpc_update"), "set_rpc_update", "is_rpc_update");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "list_used_as_blacklist"), "set_list_used_as_blacklist", "is_list_used_as_blacklist");
+
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "opus_bitrate"), "set_opus_bitrate", "get_opus_bitrate");
 
 	ADD_SIGNAL(MethodInfo("sent_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
 	ADD_SIGNAL(MethodInfo("received_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
@@ -79,6 +84,7 @@ void VoiceInstance3D::_notification(int p_what)
 				memdelete(voice_peer);
 			voice_peer = memnew(VoicePeer);
 			voice_peer->setup(this);
+			voice_peer->set_opus_bitrate(opus_bitrate);
 			_recheck_use_microphone();
 		} break;
 
@@ -128,6 +134,8 @@ VoiceInstance3D::VoiceInstance3D()
 	rpc_update = true;
 	list_used_as_blacklist = true;
 	in_dist = true;
+
+	opus_bitrate = 16000;
 
 	set_notify_transform(true);
 
@@ -298,4 +306,13 @@ StringName VoiceInstance3D::get_mic_busname() const {
 AudioStreamPlayer* VoiceInstance3D::get_mic_player() const {
 	ERR_FAIL_COND_V(!voice_peer, nullptr);
 	return voice_peer->get_mic_player();
+}
+
+void VoiceInstance3D::set_opus_bitrate(uint32_t bitrate) {
+	opus_bitrate = bitrate;
+	if (voice_peer)
+		voice_peer->set_opus_bitrate(bitrate);
+}
+uint32_t VoiceInstance3D::get_opus_bitrate() const {
+	return opus_bitrate;
 }

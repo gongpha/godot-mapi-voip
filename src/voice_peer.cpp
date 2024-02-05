@@ -22,6 +22,8 @@ VoicePeer::VoicePeer()
 	frame_count = 960; // 48000 / 50
 	use_microphone = false;
 
+	opus_bitrate = 16000;
+
 	sn_upload = StringName("_upload", true);
 
 	int32_t err;
@@ -114,7 +116,7 @@ void VoicePeer::_update_use_microphone()
 			if (err != OPUS_OK)
 				UtilityFunctions::push_error("Failed to create Opus encoder: " + String::num_int64(err));
 
-			opus_encoder_ctl(encoder, OPUS_SET_BITRATE(24000));
+			opus_encoder_ctl(encoder, OPUS_SET_BITRATE(opus_bitrate));
 			opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
 			opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
 			opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
@@ -232,4 +234,14 @@ AudioStreamPlayer* VoicePeer::get_mic_player() const {
 void VoicePeer::clear_buffer() {
 	if (mic_capture.is_valid())
 		mic_capture->clear_buffer();
+}
+
+void VoicePeer::set_opus_bitrate(uint32_t bitrate) {
+	opus_bitrate = bitrate;
+	if (encoder)
+		opus_encoder_ctl(encoder, OPUS_SET_BITRATE(bitrate));
+}
+
+uint32_t VoicePeer::get_opus_bitrate() const {
+	return opus_bitrate;
 }

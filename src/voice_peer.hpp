@@ -32,6 +32,8 @@ private:
 	bool use_microphone;
 	void _update_use_microphone();
 
+	uint32_t opus_bitrate;
+
 
 public:
 	VoicePeer();
@@ -49,6 +51,9 @@ public:
 
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
+
+	void set_opus_bitrate(uint32_t bitrate);
+	uint32_t get_opus_bitrate() const;
 
 	void clear_buffer();
 };

@@ -37,9 +37,10 @@ class VoiceInstance3D : public AudioStreamPlayer3D
 	void _send_voice_all(const PackedByteArray& data);
 	void _send_voice_single(int32_t peer, const PackedByteArray& data);
 
-	void _upload(const PackedByteArray& data);
 	void _receive(const PackedByteArray& data);
 	void _dist_too_far(bool yes);
+
+	uint32_t opus_bitrate;
 
 protected:
 	static void _bind_methods();
@@ -48,6 +49,8 @@ protected:
 public:
 	VoiceInstance3D();
 	~VoiceInstance3D();
+
+	void _upload(const PackedByteArray& data);
 
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
@@ -70,5 +73,6 @@ public:
 
 	void clear_buffer();
 
-	void update_peer_camera_position(int peer_id, const Vector3& position);
+	void set_opus_bitrate(uint32_t bitrate);
+	uint32_t get_opus_bitrate() const;
 };
