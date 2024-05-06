@@ -14,8 +14,12 @@ class VoicePeer
 {
 private:
 	Node* base;
+	Callable cb_upload;
+	Callable cb_upload_raw;
 	Ref<AudioStreamGeneratorPlayback> playback_generator;
 	OpusDecoder* decoder;
+
+	bool use_opus;
 	//List<PackedByteArray> decoder_buffer;
 	//void _poll_receive();
 
@@ -26,8 +30,6 @@ private:
 	void _poll_microphone();
 
 	int32_t frame_count;
-
-	StringName sn_upload;
 
 	bool use_microphone;
 	void _update_use_microphone();
@@ -43,6 +45,7 @@ public:
 
 	void poll_notifications(int p_what);
 	void poll_receive(const PackedByteArray& data);
+	void poll_receive_raw(const PackedVector2Array& data);
 
 	void set_frame_count(int32_t frame_count);
 	int32_t get_frame_count() const;
@@ -54,6 +57,8 @@ public:
 
 	void set_opus_bitrate(uint32_t bitrate);
 	uint32_t get_opus_bitrate() const;
+
+	void set_use_opus(bool yes);
 
 	void clear_buffer();
 };

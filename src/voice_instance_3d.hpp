@@ -13,8 +13,16 @@ class VoiceInstance3D : public AudioStreamPlayer3D
 {
 	GDCLASS(VoiceInstance3D, AudioStreamPlayer3D);
 
+public:
+	enum LoopbackMode {
+		LOOPBACK_NONE,
+		LOOPBACK_OPUS,
+		LOOPBACK_ORIGINAL_LOCAL // loopback original audio, but only for local player. no rpc
+	};
+private:
+
 	bool use_microphone;
-	bool loopback;
+	LoopbackMode loopback_mode;
 	bool rpc_update;
 
 	VoicePeer* voice_peer;
@@ -51,6 +59,7 @@ public:
 	~VoiceInstance3D();
 
 	void _upload(const PackedByteArray& data);
+	void _upload_raw(const PackedVector2Array& data);
 
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
@@ -58,8 +67,8 @@ public:
 	void set_use_microphone(bool yes);
 	bool is_using_microphone() const;
 
-	void set_loopback(bool yes);
-	bool is_loopback() const;
+	void set_loopback_mode(LoopbackMode new_mode);
+	LoopbackMode get_loopback_mode() const;
 
 	void set_rpc_update(bool yes);
 	bool is_rpc_update() const;
@@ -76,3 +85,5 @@ public:
 	void set_opus_bitrate(uint32_t bitrate);
 	uint32_t get_opus_bitrate() const;
 };
+
+VARIANT_ENUM_CAST(VoiceInstance3D::LoopbackMode);

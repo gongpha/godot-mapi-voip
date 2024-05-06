@@ -21,10 +21,9 @@ VoicePeer::VoicePeer()
 	encoder = nullptr;
 	frame_count = 960; // 48000 / 50
 	use_microphone = false;
+	use_opus = true;
 
 	opus_bitrate = 16000;
-
-	sn_upload = StringName("_upload", true);
 
 	int32_t err;
 	decoder = opus_decoder_create(SAMPLE_RATE, 1, &err);
@@ -46,6 +45,8 @@ void VoicePeer::setup(Node* base)
 {
 	// base is either an AudioStreamPlayer or an AudioStreamPlayer3D
 	this->base = base;
+	cb_upload = Callable(base, "_upload");
+	cb_upload_raw = Callable(base, "_upload_raw");
 
 	AudioStreamPlayer3D* playback3d = Object::cast_to<AudioStreamPlayer3D>(base);
 
@@ -157,30 +158,34 @@ void VoicePeer::_poll_microphone() {
 
 	PackedVector2Array pv2 = mic_capture->get_buffer(frame_count);
 
-	// opus time
-	// since we're using a mono microphone, we can just use the left channel
-	float* mono = (float*)memalloc(sizeof(float) * pv2.size());
-	for (int64_t i = 0; i < pv2.size(); i++) {
-		mono[i] = pv2[i].x;
+	if (use_opus) {
+		// opus time
+		// since we're using a mono microphone, we can just use the left channel
+		float* mono = (float*)memalloc(sizeof(float) * pv2.size());
+		for (int64_t i = 0; i < pv2.size(); i++) {
+			mono[i] = pv2[i].x;
+		}
+
+		PackedByteArray pba;
+		pba.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
+		uint8_t* w = pba.ptrw();
+
+		opus_int32 size = opus_encode_float(encoder, mono, frame_count, w, MAX_PACKET_SIZE);
+		memfree(mono);
+
+		if (size < 0) {
+			UtilityFunctions::push_error("Failed to encode Opus packet: " + String::num_int64(size));
+			return;
+		}
+
+		pba.resize(size); // resize to the actual size
+		// send the packet
+		cb_upload.call(pba); // custom_
+	} else {
+		// raw time
+		cb_upload_raw.call(pv2); // custom_
+	
 	}
-
-	PackedByteArray pba;
-	pba.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
-	uint8_t* w = pba.ptrw();
-
-	opus_int32 size = opus_encode_float(encoder, mono, frame_count, w, MAX_PACKET_SIZE);
-	memfree(mono);
-
-	if (size < 0) {
-		UtilityFunctions::push_error("Failed to encode Opus packet: " + String::num_int64(size));
-		return;
-	}
-
-	pba.resize(size); // resize to the actual size
-
-	// send the packet
-	base->call(sn_upload, pba);
-	//UtilityFunctions::prints("snd : ", pba.size());
 }
 
 void VoicePeer::poll_notifications(int p_what)
@@ -214,6 +219,10 @@ void VoicePeer::poll_receive(const PackedByteArray& data) {
 	playback_generator->push_buffer(pv2);
 }
 
+void VoicePeer::poll_receive_raw(const PackedVector2Array& data) {
+	playback_generator->push_buffer(data);
+}
+
 void VoicePeer::set_frame_count(int32_t frame_count)
 {
 	this->frame_count = frame_count;
@@ -244,4 +253,8 @@ void VoicePeer::set_opus_bitrate(uint32_t bitrate) {
 
 uint32_t VoicePeer::get_opus_bitrate() const {
 	return opus_bitrate;
+}
+
+void VoicePeer::set_use_opus(bool yes) {
+	use_opus = yes;
 }

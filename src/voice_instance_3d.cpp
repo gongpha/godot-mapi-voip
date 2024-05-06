@@ -16,6 +16,7 @@ void VoiceInstance3D::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("_notification"), &VoiceInstance3D::_notification);
 	ClassDB::bind_method(D_METHOD("_upload", "data"), &VoiceInstance3D::_upload);
+	ClassDB::bind_method(D_METHOD("_upload_raw", "data"), &VoiceInstance3D::_upload_raw);
 	ClassDB::bind_method(D_METHOD("_receive", "data"), &VoiceInstance3D::_receive);
 	ClassDB::bind_method(D_METHOD("_dist_too_far", "yes"), &VoiceInstance3D::_dist_too_far);
 
@@ -25,8 +26,8 @@ void VoiceInstance3D::_bind_methods()
 	ClassDB::bind_method(D_METHOD("get_mic_busname"), &VoiceInstance3D::get_mic_busname);
 	ClassDB::bind_method(D_METHOD("get_mic_player"), &VoiceInstance3D::get_mic_player);
 
-	ClassDB::bind_method(D_METHOD("set_loopback", "yes"), &VoiceInstance3D::set_loopback);
-	ClassDB::bind_method(D_METHOD("is_loopback"), &VoiceInstance3D::is_loopback);
+	ClassDB::bind_method(D_METHOD("set_loopback_mode", "yes"), &VoiceInstance3D::set_loopback_mode);
+	ClassDB::bind_method(D_METHOD("get_loopback_mode"), &VoiceInstance3D::get_loopback_mode);
 
 	ClassDB::bind_method(D_METHOD("set_rpc_update", "yes"), &VoiceInstance3D::set_rpc_update);
 	ClassDB::bind_method(D_METHOD("is_rpc_update"), &VoiceInstance3D::is_rpc_update);
@@ -44,7 +45,7 @@ void VoiceInstance3D::_bind_methods()
 	ClassDB::bind_method(D_METHOD("get_opus_bitrate"), &VoiceInstance3D::get_opus_bitrate);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_microphone"), "set_use_microphone", "is_using_microphone");
-	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "loopback"), "set_loopback", "is_loopback");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "loopback_mode"), "set_loopback_mode", "get_loopback_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rpc_update"), "set_rpc_update", "is_rpc_update");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "list_used_as_blacklist"), "set_list_used_as_blacklist", "is_list_used_as_blacklist");
 
@@ -54,6 +55,10 @@ void VoiceInstance3D::_bind_methods()
 	ADD_SIGNAL(MethodInfo("received_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
 	ADD_SIGNAL(MethodInfo("sent_dist_too_far_msg", PropertyInfo(Variant::INT, "peer"), PropertyInfo(Variant::BOOL, "too_far")));
 	ADD_SIGNAL(MethodInfo("received_dist_too_far_msg", PropertyInfo(Variant::INT, "peer"), PropertyInfo(Variant::BOOL, "too_far")));
+
+	BIND_ENUM_CONSTANT(LOOPBACK_NONE);
+	BIND_ENUM_CONSTANT(LOOPBACK_OPUS);
+	BIND_ENUM_CONSTANT(LOOPBACK_ORIGINAL_LOCAL);
 }
 
 void VoiceInstance3D::_notification(int p_what)
@@ -85,6 +90,7 @@ void VoiceInstance3D::_notification(int p_what)
 			voice_peer = memnew(VoicePeer);
 			voice_peer->setup(this);
 			voice_peer->set_opus_bitrate(opus_bitrate);
+			voice_peer->set_use_opus(loopback_mode != LOOPBACK_ORIGINAL_LOCAL);
 			_recheck_use_microphone();
 		} break;
 
@@ -130,7 +136,7 @@ VoiceInstance3D::VoiceInstance3D()
 	sn_sent_dist_too_far_msg = StringName("sent_dist_too_far_msg", true);
 	sn_received_dist_too_far_msg = StringName("received_dist_too_far_msg", true);
 	use_microphone = true;
-	loopback = false;
+	loopback_mode = LOOPBACK_NONE;
 	rpc_update = true;
 	list_used_as_blacklist = true;
 	in_dist = true;
@@ -167,12 +173,14 @@ bool VoiceInstance3D::is_using_microphone() const {
 	return use_microphone;
 }
 
-void VoiceInstance3D::set_loopback(bool yes) {
-	loopback = yes;
+void VoiceInstance3D::set_loopback_mode(LoopbackMode new_mode) {
+	loopback_mode = new_mode;
+	if (voice_peer)
+		voice_peer->set_use_opus(loopback_mode != LOOPBACK_ORIGINAL_LOCAL);
 }
 
-bool VoiceInstance3D::is_loopback() const {
-	return loopback;
+VoiceInstance3D::LoopbackMode VoiceInstance3D::get_loopback_mode() const {
+	return loopback_mode;
 }
 
 void VoiceInstance3D::set_rpc_update(bool yes) {
@@ -277,9 +285,15 @@ void VoiceInstance3D::_upload(const PackedByteArray& data)
 
 		emit_signal(sn_sent_frame_data, data);
 
-		if (loopback) {
-			voice_peer->poll_receive(data);
-		}
+		voice_peer->poll_receive(data);
+	}
+}
+
+void VoiceInstance3D::_upload_raw(const PackedVector2Array& data) {
+	ERR_FAIL_COND(!voice_peer);
+	_recheck_use_microphone();
+	if (use_microphone && is_multiplayer_authority()) {
+		voice_peer->poll_receive_raw(data);
 	}
 }
 

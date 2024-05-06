@@ -12,13 +12,6 @@ debug_or_release = "release" if env["target"] == "template_release" else "debug"
 
 if env["platform"] == "windows":
     env.Append(LIBPATH=['bin/windows_x64/' + debug_or_release])
-    if debug_or_release == "debug" :
-        env.AppendUnique(CCFLAGS=['/MDd'])
-    else :
-        if env["use_static_cpp"]:
-            env.AppendUnique(CCFLAGS=['/MT'])
-        else:
-            env.AppendUnique(CCFLAGS=['/MD'])
 
 env.Append(LIBS=['opus.lib'])
 sources = Glob("src/*.cpp")
