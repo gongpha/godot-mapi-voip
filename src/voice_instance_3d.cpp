@@ -70,7 +70,7 @@ void VoiceInstance3D::_notification(int p_what)
 		case NOTIFICATION_READY: {
 			Dictionary opts;
 			opts["rpc_mode"] = MultiplayerAPI::RPC_MODE_ANY_PEER;
-			opts["transfer_mode"] = MultiplayerPeer::TRANSFER_MODE_UNRELIABLE;
+			opts["transfer_mode"] = MultiplayerPeer::TRANSFER_MODE_UNRELIABLE_ORDERED;
 			opts["call_local"] = false;
 			opts["channel"] = RPC_CHANNEL;
 			rpc_config(sn_receive, opts);

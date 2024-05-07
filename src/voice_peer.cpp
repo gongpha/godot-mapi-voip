@@ -8,6 +8,7 @@
 #include <godot_cpp/classes/audio_stream_generator.hpp>
 #include <godot_cpp/classes/multiplayer_api.hpp>
 #include <godot_cpp/classes/multiplayer_peer.hpp>
+#include <godot_cpp/classes/engine.hpp>
 
 
 #define MAX_PACKET_SIZE 3828 // 1276 * 3
@@ -21,7 +22,7 @@ VoicePeer::VoicePeer()
 	mic = nullptr;
 	//mic_bus = -1;
 	encoder = nullptr;
-	frame_count = 960; // 48000 / 50
+	
 	use_microphone = false;
 	use_opus = true;
 
@@ -155,38 +156,55 @@ void VoicePeer::_poll_microphone() {
 	if (mic_capture.is_null())
 		return;
 
-	if (!mic_capture->can_get_buffer(frame_count))
-		return;
+	int target_frame_count;
+	int processed_frame_count = 0;
 
-	PackedVector2Array pv2 = mic_capture->get_buffer(frame_count);
+	double fps = Engine::get_singleton()->get_frames_per_second(); // force update
+	if (fps > 50)
+		fps = 50; // cap at 50
 
-	if (use_opus) {
-		// opus time
-		// since we're using a mono microphone, we can just use the left channel
-		float* mono = (float*)memalloc(sizeof(float) * pv2.size());
-		for (int64_t i = 0; i < pv2.size(); i++) {
-			mono[i] = pv2[i].x;
+	target_frame_count = 48000 / fps; // 1 second of audio
+
+	const int frame_count = 960; // 20ms at 48kHz
+
+	PackedVector2Array pv2;
+
+	while (target_frame_count > processed_frame_count) {
+		if (!mic_capture->can_get_buffer(frame_count))
+			break;
+
+		pv2 = mic_capture->get_buffer(frame_count);
+
+		if (use_opus) {
+			// opus time
+			// since we're using a mono microphone, we can just use the left channel
+			float* mono = (float*)memalloc(sizeof(float) * pv2.size());
+			for (int64_t i = 0; i < pv2.size(); i++) {
+				mono[i] = pv2[i].x;
+			}
+
+			PackedByteArray pba;
+			pba.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
+			uint8_t* w = pba.ptrw();
+
+			opus_int32 size = opus_encode_float(encoder, mono, frame_count, w, MAX_PACKET_SIZE);
+			memfree(mono);
+
+			if (size < 0) {
+				UtilityFunctions::push_error("Failed to encode Opus packet: " + String::num_int64(size));
+				break;
+			}
+
+			pba.resize(size); // resize to the actual size
+			// send the packet
+			cb_upload.call(pba); // custom_
+		} else {
+			// raw time
+			cb_upload_raw.call(pv2); // custom_
+		
 		}
 
-		PackedByteArray pba;
-		pba.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
-		uint8_t* w = pba.ptrw();
-
-		opus_int32 size = opus_encode_float(encoder, mono, frame_count, w, MAX_PACKET_SIZE);
-		memfree(mono);
-
-		if (size < 0) {
-			UtilityFunctions::push_error("Failed to encode Opus packet: " + String::num_int64(size));
-			return;
-		}
-
-		pba.resize(size); // resize to the actual size
-		// send the packet
-		cb_upload.call(pba); // custom_
-	} else {
-		// raw time
-		cb_upload_raw.call(pv2); // custom_
-	
+		processed_frame_count += frame_count;
 	}
 }
 
@@ -199,6 +217,7 @@ void VoicePeer::poll_notifications(int p_what)
 }
 
 void VoicePeer::poll_receive(const PackedByteArray& data) {
+	const int frame_count = 960; // 20ms at 48kHz
 	float* f = (float*)memalloc(sizeof(float) * frame_count * 6);
 	int r = opus_decode_float(decoder, data.ptr(), data.size(), f, frame_count, 0);
 	if (r < 0) {
@@ -223,16 +242,6 @@ void VoicePeer::poll_receive(const PackedByteArray& data) {
 
 void VoicePeer::poll_receive_raw(const PackedVector2Array& data) {
 	playback_generator->push_buffer(data);
-}
-
-void VoicePeer::set_frame_count(int32_t frame_count)
-{
-	this->frame_count = frame_count;
-}
-
-int32_t VoicePeer::get_frame_count() const
-{
-	return frame_count;
 }
 
 StringName VoicePeer::get_mic_busname() const {

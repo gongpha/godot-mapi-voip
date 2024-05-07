@@ -29,8 +29,6 @@ private:
 	OpusEncoder* encoder;
 	void _poll_microphone();
 
-	int32_t frame_count;
-
 	bool use_microphone;
 	void _update_use_microphone();
 
@@ -46,9 +44,6 @@ public:
 	void poll_notifications(int p_what);
 	void poll_receive(const PackedByteArray& data);
 	void poll_receive_raw(const PackedVector2Array& data);
-
-	void set_frame_count(int32_t frame_count);
-	int32_t get_frame_count() const;
 
 	void set_use_microphone(bool yes);
 
