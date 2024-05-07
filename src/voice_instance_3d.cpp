@@ -53,6 +53,8 @@ void VoiceInstance3D::_bind_methods()
 
 	ADD_SIGNAL(MethodInfo("sent_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
 	ADD_SIGNAL(MethodInfo("received_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
+	ADD_SIGNAL(MethodInfo("sent_frame_data_raw", PropertyInfo(Variant::PACKED_VECTOR2_ARRAY, "data")));
+	ADD_SIGNAL(MethodInfo("received_frame_data_raw", PropertyInfo(Variant::PACKED_VECTOR2_ARRAY, "data")));
 	ADD_SIGNAL(MethodInfo("sent_dist_too_far_msg", PropertyInfo(Variant::INT, "peer"), PropertyInfo(Variant::BOOL, "too_far")));
 	ADD_SIGNAL(MethodInfo("received_dist_too_far_msg", PropertyInfo(Variant::INT, "peer"), PropertyInfo(Variant::BOOL, "too_far")));
 
@@ -133,6 +135,8 @@ VoiceInstance3D::VoiceInstance3D()
 	sn_dist_too_far = StringName("_dist_too_far", true);
 	sn_sent_frame_data = StringName("sent_frame_data", true);
 	sn_received_frame_data = StringName("received_frame_data", true);
+	sn_sent_frame_data_raw = StringName("sent_frame_data_raw", true);
+	sn_received_frame_data_raw = StringName("received_frame_data_raw", true);
 	sn_sent_dist_too_far_msg = StringName("sent_dist_too_far_msg", true);
 	sn_received_dist_too_far_msg = StringName("received_dist_too_far_msg", true);
 	use_microphone = true;
@@ -285,7 +289,8 @@ void VoiceInstance3D::_upload(const PackedByteArray& data)
 
 		emit_signal(sn_sent_frame_data, data);
 
-		voice_peer->poll_receive(data);
+		if (loopback_mode == LOOPBACK_OPUS)
+			voice_peer->poll_receive(data);
 	}
 }
 
@@ -293,7 +298,10 @@ void VoiceInstance3D::_upload_raw(const PackedVector2Array& data) {
 	ERR_FAIL_COND(!voice_peer);
 	_recheck_use_microphone();
 	if (use_microphone && is_multiplayer_authority()) {
-		voice_peer->poll_receive_raw(data);
+		emit_signal(sn_sent_frame_data_raw, data);
+
+		if (loopback_mode == LOOPBACK_ORIGINAL_LOCAL)
+			voice_peer->poll_receive_raw(data);
 	}
 }
 

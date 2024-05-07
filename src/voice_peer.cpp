@@ -13,6 +13,8 @@
 #define MAX_PACKET_SIZE 3828 // 1276 * 3
 #define SAMPLE_RATE 48000
 
+#define MAX_PROCESS_RATE 50
+
 VoicePeer::VoicePeer()
 {
 	base = nullptr;

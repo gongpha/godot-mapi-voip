@@ -35,6 +35,8 @@ private:
 	StringName sn_dist_too_far;
 	StringName sn_sent_frame_data;
 	StringName sn_received_frame_data;
+	StringName sn_sent_frame_data_raw;
+	StringName sn_received_frame_data_raw;
 	StringName sn_sent_dist_too_far_msg;
 	StringName sn_received_dist_too_far_msg;
 
