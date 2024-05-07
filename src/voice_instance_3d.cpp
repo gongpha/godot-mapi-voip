@@ -44,12 +44,16 @@ void VoiceInstance3D::_bind_methods()
 	ClassDB::bind_method(D_METHOD("set_opus_bitrate", "bitrate"), &VoiceInstance3D::set_opus_bitrate);
 	ClassDB::bind_method(D_METHOD("get_opus_bitrate"), &VoiceInstance3D::get_opus_bitrate);
 
+	ClassDB::bind_method(D_METHOD("set_use_dtx", "yes"), &VoiceInstance3D::set_use_dtx);
+	ClassDB::bind_method(D_METHOD("is_using_dtx"), &VoiceInstance3D::is_using_dtx);
+
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_microphone"), "set_use_microphone", "is_using_microphone");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "loopback_mode"), "set_loopback_mode", "get_loopback_mode");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "rpc_update"), "set_rpc_update", "is_rpc_update");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "list_used_as_blacklist"), "set_list_used_as_blacklist", "is_list_used_as_blacklist");
 
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "opus_bitrate"), "set_opus_bitrate", "get_opus_bitrate");
+	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_dtx"), "set_use_dtx", "is_using_dtx");
 
 	ADD_SIGNAL(MethodInfo("sent_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
 	ADD_SIGNAL(MethodInfo("received_frame_data", PropertyInfo(Variant::PACKED_BYTE_ARRAY, "data")));
@@ -93,6 +97,7 @@ void VoiceInstance3D::_notification(int p_what)
 			voice_peer->setup(this);
 			voice_peer->set_opus_bitrate(opus_bitrate);
 			voice_peer->set_use_opus(loopback_mode != LOOPBACK_ORIGINAL_LOCAL);
+			voice_peer->set_use_dtx(use_dtx);
 			_recheck_use_microphone();
 		} break;
 
@@ -144,6 +149,7 @@ VoiceInstance3D::VoiceInstance3D()
 	rpc_update = true;
 	list_used_as_blacklist = true;
 	in_dist = true;
+	use_dtx = false;
 
 	opus_bitrate = 16000;
 
@@ -193,6 +199,15 @@ void VoiceInstance3D::set_rpc_update(bool yes) {
 
 bool VoiceInstance3D::is_rpc_update() const {
 	return rpc_update;
+}
+
+void VoiceInstance3D::set_use_dtx(bool yes) {
+	use_dtx = yes;
+	if (voice_peer)
+		voice_peer->set_use_dtx(yes);
+}
+bool VoiceInstance3D::is_using_dtx() const {
+	return use_dtx;
 }
 
 void VoiceInstance3D::add_to_list(int peer_id) {

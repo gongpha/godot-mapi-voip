@@ -41,6 +41,8 @@ private:
 	StringName sn_received_dist_too_far_msg;
 
 	bool in_dist;
+	
+	bool use_dtx;
 
 	void _recheck_use_microphone() const;
 	void _send_voice(const PackedByteArray& data);
@@ -74,6 +76,9 @@ public:
 
 	void set_rpc_update(bool yes);
 	bool is_rpc_update() const;
+
+	void set_use_dtx(bool yes);
+	bool is_using_dtx() const;
 
 	void add_to_list(int peer_id);
 	void remove_in_list(int peer_id);

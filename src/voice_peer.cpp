@@ -123,7 +123,7 @@ void VoicePeer::_update_use_microphone()
 			opus_encoder_ctl(encoder, OPUS_SET_BITRATE(opus_bitrate));
 			opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
 			opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-			opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
+			//opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
 		}
 	}
 	else {
@@ -262,10 +262,11 @@ void VoicePeer::set_opus_bitrate(uint32_t bitrate) {
 		opus_encoder_ctl(encoder, OPUS_SET_BITRATE(bitrate));
 }
 
-uint32_t VoicePeer::get_opus_bitrate() const {
-	return opus_bitrate;
-}
-
 void VoicePeer::set_use_opus(bool yes) {
 	use_opus = yes;
+}
+
+void VoicePeer::set_use_dtx(bool yes) {
+	if (encoder)
+		opus_encoder_ctl(encoder, OPUS_SET_DTX(yes ? 1 : 0));
 }

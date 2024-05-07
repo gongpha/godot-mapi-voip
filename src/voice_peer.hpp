@@ -51,9 +51,8 @@ public:
 	AudioStreamPlayer* get_mic_player() const;
 
 	void set_opus_bitrate(uint32_t bitrate);
-	uint32_t get_opus_bitrate() const;
-
 	void set_use_opus(bool yes);
+	void set_use_dtx(bool yes);
 
 	void clear_buffer();
 };
