@@ -27,6 +27,7 @@ VoicePeer::VoicePeer()
 	use_opus = true;
 
 	opus_bitrate = 16000;
+	use_dtx = false;
 
 	int32_t err;
 	decoder = opus_decoder_create(SAMPLE_RATE, 1, &err);
@@ -123,7 +124,8 @@ void VoicePeer::_update_use_microphone()
 			opus_encoder_ctl(encoder, OPUS_SET_BITRATE(opus_bitrate));
 			opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(10));
 			opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
-			//opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
+			if (use_dtx)
+				opus_encoder_ctl(encoder, OPUS_SET_DTX(1));
 		}
 	}
 	else {
@@ -192,10 +194,16 @@ void VoicePeer::_poll_microphone() {
 
 			if (size < 0) {
 				UtilityFunctions::push_error("Failed to encode Opus packet: " + String::num_int64(size));
-				break;
+				continue;
+			}
+
+			if (size == 0) {
+				// no data
+				continue;
 			}
 
 			pba.resize(size); // resize to the actual size
+			
 			// send the packet
 			cb_upload.call(pba); // custom_
 		} else {
@@ -267,6 +275,7 @@ void VoicePeer::set_use_opus(bool yes) {
 }
 
 void VoicePeer::set_use_dtx(bool yes) {
+	use_dtx = yes;
 	if (encoder)
 		opus_encoder_ctl(encoder, OPUS_SET_DTX(yes ? 1 : 0));
 }

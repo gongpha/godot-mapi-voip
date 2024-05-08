@@ -33,6 +33,7 @@ private:
 	void _update_use_microphone();
 
 	uint32_t opus_bitrate;
+	bool use_dtx;
 
 
 public:
