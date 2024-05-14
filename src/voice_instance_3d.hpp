@@ -62,8 +62,8 @@ public:
 	VoiceInstance3D();
 	~VoiceInstance3D();
 
-	void _upload(const PackedByteArray& data);
-	void _upload_raw(const PackedVector2Array& data);
+	void _upload();
+	void _upload_raw();
 
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
@@ -91,6 +91,8 @@ public:
 
 	void set_opus_bitrate(uint32_t bitrate);
 	uint32_t get_opus_bitrate() const;
+
+	int get_pitch();
 };
 
 VARIANT_ENUM_CAST(VoiceInstance3D::LoopbackMode);

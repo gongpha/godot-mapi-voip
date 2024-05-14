@@ -29,10 +29,14 @@ VoicePeer::VoicePeer()
 	opus_bitrate = 16000;
 	use_dtx = false;
 
+	decoded_my_frame = false;
+
 	int32_t err;
 	decoder = opus_decoder_create(SAMPLE_RATE, 1, &err);
 	if (err != OPUS_OK)
 		UtilityFunctions::push_error("Failed to create Opus decoder: " + String::num_int64(err));
+
+	buffer.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
 }
 
 VoicePeer::~VoicePeer()
@@ -147,6 +151,15 @@ void VoicePeer::_update_use_microphone()
 	}
 }
 
+void VoicePeer::_decode_my_frame() {
+	if (decoded_my_frame)
+		return;
+
+	decoded_my_frame = true;
+
+	poll_receive(buffer, true, true);
+}
+
 void VoicePeer::set_use_microphone(bool yes) {
 	if (use_microphone == yes)
 		return;
@@ -169,25 +182,22 @@ void VoicePeer::_poll_microphone() {
 
 	const int frame_count = 960; // 20ms at 48kHz
 
-	PackedVector2Array pv2;
-
 	while (target_frame_count > processed_frame_count) {
 		if (!mic_capture->can_get_buffer(frame_count))
 			break;
 
-		pv2 = mic_capture->get_buffer(frame_count);
+		buffer_raw = mic_capture->get_buffer(frame_count);
 
 		if (use_opus) {
 			// opus time
 			// since we're using a mono microphone, we can just use the left channel
-			float* mono = (float*)memalloc(sizeof(float) * pv2.size());
-			for (int64_t i = 0; i < pv2.size(); i++) {
-				mono[i] = pv2[i].x;
+			float* mono = (float*)memalloc(sizeof(float) * buffer_raw.size());
+			for (int64_t i = 0; i < buffer_raw.size(); i++) {
+				mono[i] = buffer_raw[i].x;
 			}
 
-			PackedByteArray pba;
-			pba.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
-			uint8_t* w = pba.ptrw();
+			buffer.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
+			uint8_t* w = buffer.ptrw();
 
 			opus_int32 size = opus_encode_float(encoder, mono, frame_count, w, MAX_PACKET_SIZE);
 			memfree(mono);
@@ -202,13 +212,15 @@ void VoicePeer::_poll_microphone() {
 				continue;
 			}
 
-			pba.resize(size); // resize to the actual size
+			buffer.resize(size); // resize to the actual size
+
+			decoded_my_frame = false;
 			
 			// send the packet
-			cb_upload.call(pba); // custom_
+			cb_upload.call(); // custom_
 		} else {
 			// raw time
-			cb_upload_raw.call(pv2); // custom_
+			cb_upload_raw.call(); // custom_
 		
 		}
 
@@ -224,12 +236,21 @@ void VoicePeer::poll_notifications(int p_what)
 	_poll_microphone();
 }
 
-void VoicePeer::poll_receive(const PackedByteArray& data) {
+void VoicePeer::poll_receive(const PackedByteArray& data, bool is_my_data, bool dont_playback) {
 	const int frame_count = 960; // 20ms at 48kHz
 	float* f = (float*)memalloc(sizeof(float) * frame_count * 6);
 	int r = opus_decode_float(decoder, data.ptr(), data.size(), f, frame_count, 0);
 	if (r < 0) {
 		UtilityFunctions::push_error("Failed to decode Opus packet: " + String::num_int64(r));
+		memfree(f);
+		return;
+	}
+
+	if (is_my_data) {
+		decoded_my_frame = true;
+	}
+
+	if (dont_playback) {
 		memfree(f);
 		return;
 	}
@@ -259,6 +280,14 @@ AudioStreamPlayer* VoicePeer::get_mic_player() const {
 	return mic;
 }
 
+const PackedByteArray& VoicePeer::get_buffer() const {
+	return buffer;
+}
+
+const PackedVector2Array& VoicePeer::get_buffer_raw() const {
+	return buffer_raw;
+}
+
 void VoicePeer::clear_buffer() {
 	if (mic_capture.is_valid())
 		mic_capture->clear_buffer();
@@ -278,4 +307,13 @@ void VoicePeer::set_use_dtx(bool yes) {
 	use_dtx = yes;
 	if (encoder)
 		opus_encoder_ctl(encoder, OPUS_SET_DTX(yes ? 1 : 0));
+}
+
+int VoicePeer::get_pitch() {
+	_decode_my_frame();
+
+	opus_int32 pitch;
+	opus_decoder_ctl(decoder, OPUS_GET_PITCH(&pitch));
+
+	return pitch;
 }

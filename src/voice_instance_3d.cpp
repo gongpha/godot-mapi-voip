@@ -15,8 +15,8 @@ using namespace godot;
 void VoiceInstance3D::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("_notification"), &VoiceInstance3D::_notification);
-	ClassDB::bind_method(D_METHOD("_upload", "data"), &VoiceInstance3D::_upload);
-	ClassDB::bind_method(D_METHOD("_upload_raw", "data"), &VoiceInstance3D::_upload_raw);
+	ClassDB::bind_method(D_METHOD("_upload"), &VoiceInstance3D::_upload);
+	ClassDB::bind_method(D_METHOD("_upload_raw"), &VoiceInstance3D::_upload_raw);
 	ClassDB::bind_method(D_METHOD("_receive", "data"), &VoiceInstance3D::_receive);
 	ClassDB::bind_method(D_METHOD("_dist_too_far", "yes"), &VoiceInstance3D::_dist_too_far);
 
@@ -46,6 +46,8 @@ void VoiceInstance3D::_bind_methods()
 
 	ClassDB::bind_method(D_METHOD("set_use_dtx", "yes"), &VoiceInstance3D::set_use_dtx);
 	ClassDB::bind_method(D_METHOD("is_using_dtx"), &VoiceInstance3D::is_using_dtx);
+
+	ClassDB::bind_method(D_METHOD("get_pitch"), &VoiceInstance3D::get_pitch);
 
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "use_microphone"), "set_use_microphone", "is_using_microphone");
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "loopback_mode"), "set_loopback_mode", "get_loopback_mode");
@@ -293,10 +295,12 @@ void VoiceInstance3D::_send_voice_single(int32_t peer, const PackedByteArray& da
 	rpc_id(peer, sn_receive, data);
 }
 
-void VoiceInstance3D::_upload(const PackedByteArray& data)
+void VoiceInstance3D::_upload()
 {
 	ERR_FAIL_COND(!voice_peer);
 	_recheck_use_microphone();
+	const PackedByteArray& data = voice_peer->get_buffer();
+
 	if (use_microphone && is_multiplayer_authority()) {
 		if (rpc_update) {
 			_send_voice(data);
@@ -305,13 +309,15 @@ void VoiceInstance3D::_upload(const PackedByteArray& data)
 		emit_signal(sn_sent_frame_data, data);
 
 		if (loopback_mode == LOOPBACK_OPUS)
-			voice_peer->poll_receive(data);
+			voice_peer->poll_receive(data, true);
 	}
 }
 
-void VoiceInstance3D::_upload_raw(const PackedVector2Array& data) {
+void VoiceInstance3D::_upload_raw() {
 	ERR_FAIL_COND(!voice_peer);
 	_recheck_use_microphone();
+	const PackedVector2Array& data = voice_peer->get_buffer_raw();
+
 	if (use_microphone && is_multiplayer_authority()) {
 		emit_signal(sn_sent_frame_data_raw, data);
 
@@ -352,4 +358,9 @@ void VoiceInstance3D::set_opus_bitrate(uint32_t bitrate) {
 }
 uint32_t VoiceInstance3D::get_opus_bitrate() const {
 	return opus_bitrate;
+}
+
+int VoiceInstance3D::get_pitch() {
+	ERR_FAIL_COND_V(!voice_peer, 0);
+	return voice_peer->get_pitch();
 }

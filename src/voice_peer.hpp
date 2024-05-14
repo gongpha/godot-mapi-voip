@@ -23,6 +23,9 @@ private:
 	//List<PackedByteArray> decoder_buffer;
 	//void _poll_receive();
 
+	PackedByteArray buffer;
+	PackedVector2Array buffer_raw;
+
 	AudioStreamPlayer* mic;
 	Ref<AudioEffectCapture> mic_capture;
 	StringName mic_busname; // "" means no microphone added
@@ -35,6 +38,9 @@ private:
 	uint32_t opus_bitrate;
 	bool use_dtx;
 
+	bool decoded_my_frame;
+	void _decode_my_frame();
+
 
 public:
 	VoicePeer();
@@ -43,7 +49,7 @@ public:
 	void setup(Node* base);
 
 	void poll_notifications(int p_what);
-	void poll_receive(const PackedByteArray& data);
+	void poll_receive(const PackedByteArray& data, bool is_my_data = false, bool dont_playback = false);
 	void poll_receive_raw(const PackedVector2Array& data);
 
 	void set_use_microphone(bool yes);
@@ -51,9 +57,14 @@ public:
 	StringName get_mic_busname() const;
 	AudioStreamPlayer* get_mic_player() const;
 
+	const PackedByteArray& get_buffer() const;
+	const PackedVector2Array& get_buffer_raw() const;
+
 	void set_opus_bitrate(uint32_t bitrate);
 	void set_use_opus(bool yes);
 	void set_use_dtx(bool yes);
+
+	int get_pitch();
 
 	void clear_buffer();
 };
