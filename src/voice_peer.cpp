@@ -35,8 +35,6 @@ VoicePeer::VoicePeer()
 	decoder = opus_decoder_create(SAMPLE_RATE, 1, &err);
 	if (err != OPUS_OK)
 		UtilityFunctions::push_error("Failed to create Opus decoder: " + String::num_int64(err));
-
-	buffer.resize(MAX_PACKET_SIZE); // MAX_PACKET_SIZE * channel(1)
 }
 
 VoicePeer::~VoicePeer()
@@ -156,6 +154,9 @@ void VoicePeer::_decode_my_frame() {
 		return;
 
 	decoded_my_frame = true;
+
+	if (buffer.is_empty())
+		return;
 
 	poll_receive(buffer, true, true);
 }
